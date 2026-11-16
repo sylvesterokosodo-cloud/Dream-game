@@ -1,0 +1,96 @@
+[
+  {
+    "name": "Browse tournaments and join with a funded demo wallet",
+    "sanity": true,
+    "viewport": "desktop",
+    "covers": [
+      "tournament discovery",
+      "demo wallet balance",
+      "entry fee reservation",
+      "target count triggering live tournament",
+      "random first-round bracket",
+      "share app invite link"
+    ],
+    "description": "Verifies a player can browse a published tournament, enter with sufficient demo funds and trigger the tournament when the target is reached.",
+    "steps": [
+      "Open Discover and note an open tournament",
+      "Open My Wallet and add demo credits",
+      "Return to Discover and join the tournament until its target count is reached",
+      "Open Brackets",
+      "Use Share app and share the Dream Game invite link"
+    ],
+    "expected": "The entry fee is reserved from available demo balance, the tournament changes to Live at its target and the bracket displays randomly generated pairings. The share action opens the device share sheet or copies the live app link for inviting new users."
+  },
+  {
+    "name": "Admin creates a prize tournament",
+    "viewport": "desktop",
+    "covers": [
+      "admin tournament creation",
+      "game catalogue excludes Chess and Checkers",
+      "prize title and description",
+      "prize image URL",
+      "48-hour deadline",
+      "database persistence"
+    ],
+    "description": "Verifies an admin can publish a fully described prize tournament and its details remain available after refreshing.",
+    "steps": [
+      "Open Admin and create a tournament with a name, game, fee, target, prize name, description and image URL",
+      "Publish the tournament",
+      "Refresh the app and return to Discover"
+    ],
+    "expected": "The new tournament appears with its selected game, fee, target, prize image and prize description, and a 48-hour deadline."
+  },
+  {
+    "name": "Reject invalid tournament settings and insufficient wallet funds",
+    "viewport": "mobile",
+    "covers": [
+      "form validation",
+      "entry affordability guardrail",
+      "payment demo mode disclosure",
+      "mobile layout"
+    ],
+    "description": "Verifies invalid tournament data and a join attempt without enough demo credits are rejected without creating an entry.",
+    "steps": [
+      "Try to publish a tournament with fewer than two players or a blank prize title",
+      "Open a tournament whose entry fee exceeds the wallet balance",
+      "Attempt to join"
+    ],
+    "expected": "Validation or insufficient-balance feedback is shown and no invalid tournament entry is created."
+  },
+  {
+    "name": "Display knockout rounds and public champion",
+    "viewport": "desktop",
+    "covers": [
+      "randomized two-player knockout matches",
+      "disclosed house-bot pairing",
+      "round advancement",
+      "champion announcement"
+    ],
+    "description": "Verifies the bracket supports odd-player balancing with a labelled house bot, records round winners, and shows the champion in the public winners section.",
+    "steps": [
+      "Open a live tournament bracket",
+      "Review matches and any clearly labelled house-bot participant",
+      "Submit one winner per match through the tournament advancement workflow",
+      "Open Winners after the final match"
+    ],
+    "expected": "Each round records one winner per match, advances the winners to the next round and displays the final champion and prize."
+  },
+  {
+    "name": "Cancel an entry before start and refund demo reserve",
+    "viewport": "mobile",
+    "covers": [
+      "pre-start cancellation",
+      "reserved balance refund",
+      "two-day underfilled failure state",
+      "no cancellation after start"
+    ],
+    "description": "Verifies reserved demo entry credits are refundable before tournament start and the app blocks cancellation once live.",
+    "steps": [
+      "Join an open tournament",
+      "Cancel the entry before it starts",
+      "Confirm the available demo balance is restored",
+      "Attempt cancellation after the tournament becomes live"
+    ],
+    "expected": "The pre-start cancellation returns the reserved demo fee and cancellation is rejected after the tournament opens."
+  }
+]
