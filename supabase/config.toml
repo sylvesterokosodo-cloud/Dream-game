@@ -1,0 +1,15 @@
+# Minimal Supabase CLI config. `supabase init` may generate extra defaults; keep the
+# function blocks below. Secrets are NOT stored here (see docs/DEPLOYMENT.md).
+project_id = "dream-game"
+
+[functions.flutterwave-webhook]
+verify_jwt = false
+
+[functions.flutterwave-init]
+verify_jwt = true
+
+[functions.flutterwave-verify]
+verify_jwt = true
+
+[functions.game-action]
+verify_jwt = true
