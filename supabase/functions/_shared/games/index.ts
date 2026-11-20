@@ -22,7 +22,12 @@ export const ENGINES: Record<string, Engine> = {
 /** Games that can end in a draw (replayed up to MAX_DRAWS times, then admin decides). */
 export const MAX_DRAWS = 3;
 
-export type FullGame = { state: unknown; draws: number };
+export type FullGame = {
+  state: unknown;
+  draws: number;
+  /** epoch-ms of each player's last accepted action (race-game rate limiting) */
+  last?: [number, number];
+};
 export type PublicGame = {
   game: string;
   draws: number;
@@ -54,5 +59,5 @@ export function publicGame(gameId: string, full: FullGame): PublicGame {
 }
 
 export function applyMove(gameId: string, full: FullGame, move: unknown, player: Idx): FullGame {
-  return { state: engineFor(gameId).apply(full.state, move, player), draws: full.draws };
+  return { ...full, state: engineFor(gameId).apply(full.state, move, player) };
 }

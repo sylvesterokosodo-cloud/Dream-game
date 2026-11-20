@@ -339,3 +339,21 @@ test("game: simultaneous moves hit the version check and get a retryable 409", a
   assert.equal(r.status, 409);
   assert.match((await bodyOf(r)).error, /try again/);
 });
+
+test("game: race games are rate-limited per player (anti brute-force); the opponent is unaffected", async () => {
+  db.dg_matches[0].game = "scramble";
+  await act("tokA", { action: "get" });
+  const realNow = Date.now;
+  let t = 1_000_000;
+  (Date as any).now = () => t;
+  try {
+    assert.equal((await move("tokA", { guess: "aaa" })).status, 200);
+    t += 300;
+    assert.equal((await move("tokA", { guess: "bbb" })).status, 429, "second guess within 1.5s is refused");
+    assert.equal((await move("tokB", { guess: "ccc" })).status, 200, "other player has their own allowance");
+    t += 1600;
+    assert.equal((await move("tokA", { guess: "ddd" })).status, 200, "allowed again after the interval");
+  } finally {
+    (Date as any).now = realNow;
+  }
+});

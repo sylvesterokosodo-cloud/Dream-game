@@ -1,96 +1,78 @@
 [
   {
-    "name": "Browse tournaments and join with a funded demo wallet",
-    "sanity": true,
+    "name": "Buy coins with Flutterwave (test mode)",
     "viewport": "desktop",
-    "covers": [
-      "tournament discovery",
-      "demo wallet balance",
-      "entry fee reservation",
-      "target count triggering live tournament",
-      "random first-round bracket",
-      "share app invite link"
-    ],
-    "description": "Verifies a player can browse a published tournament, enter with sufficient demo funds and trigger the tournament when the target is reached.",
+    "covers": ["flutterwave-init", "redirect return", "flutterwave-verify", "webhook idempotency", "1 coin = NGN 1"],
     "steps": [
-      "Open Discover and note an open tournament",
-      "Open My Wallet and add demo credits",
-      "Return to Discover and join the tournament until its target count is reached",
-      "Open Brackets",
-      "Use Share app and share the Dream Game invite link"
+      "Log in as a player and open My Wallet",
+      "Buy 1,000 coins using a Flutterwave TEST card",
+      "Return to the app after payment",
+      "Replay the same webhook payload from the Flutterwave dashboard"
     ],
-    "expected": "The entry fee is reserved from available demo balance, the tournament changes to Live at its target and the bracket displays randomly generated pairings. The share action opens the device share sheet or copies the live app link for inviting new users."
+    "expected": "Wallet shows exactly +1,000 coins once. The replay does not credit again. A ledger row 'Coins purchased' appears."
   },
   {
-    "name": "Admin creates a prize tournament",
+    "name": "Player cannot create or manage tournaments",
     "viewport": "desktop",
-    "covers": [
-      "admin tournament creation",
-      "game catalogue excludes Chess and Checkers",
-      "prize title and description",
-      "prize image URL",
-      "48-hour deadline",
-      "database persistence"
-    ],
-    "description": "Verifies an admin can publish a fully described prize tournament and its details remain available after refreshing.",
+    "covers": ["admin-only", "RLS", "server-side authorisation"],
     "steps": [
-      "Open Admin and create a tournament with a name, game, fee, target, prize name, description and image URL",
-      "Publish the tournament",
-      "Refresh the app and return to Discover"
+      "Log in as an ordinary player",
+      "Open #/admin directly",
+      "In the browser console call supabase.rpc('dg_admin_create_tournament', {...})"
     ],
-    "expected": "The new tournament appears with its selected game, fee, target, prize image and prize description, and a 48-hour deadline."
+    "expected": "Admin page shows 'Administrators only'. The RPC fails with 'Administrator access required'. No tournament is created."
   },
   {
-    "name": "Reject invalid tournament settings and insufficient wallet funds",
+    "name": "Admin publishes a tournament with a unique link",
+    "viewport": "desktop",
+    "covers": ["admin creation", "prize fields", "48-hour deadline", "unique slug"],
+    "steps": [
+      "Log in as sylvesterokosodo@gmail.com (confirmed email)",
+      "Create two tournaments with the same name and publish both",
+      "Copy each link and open it in a private window"
+    ],
+    "expected": "Two different #/t/<slug> links. Both show prize, fee, game list and ~48h countdown to anonymous visitors."
+  },
+  {
+    "name": "Join, escrow, cancel, rejoin",
     "viewport": "mobile",
-    "covers": [
-      "form validation",
-      "entry affordability guardrail",
-      "payment demo mode disclosure",
-      "mobile layout"
-    ],
-    "description": "Verifies invalid tournament data and a join attempt without enough demo credits are rejected without creating an entry.",
+    "covers": ["escrow reserve", "refund", "insufficient funds guard"],
     "steps": [
-      "Try to publish a tournament with fewer than two players or a blank prize title",
-      "Open a tournament whose entry fee exceeds the wallet balance",
-      "Attempt to join"
+      "Join with sufficient coins",
+      "Check wallet: available decreased, escrow increased",
+      "Cancel entry; check refund",
+      "Try joining a tournament whose fee exceeds balance"
     ],
-    "expected": "Validation or insufficient-balance feedback is shown and no invalid tournament entry is created."
+    "expected": "Coins move available -> escrow -> available. Insufficient balance shows an error and creates no entry."
   },
   {
-    "name": "Display knockout rounds and public champion",
+    "name": "Full tournament: bracket, play, admin approval, payout",
     "viewport": "desktop",
-    "covers": [
-      "randomized two-player knockout matches",
-      "disclosed house-bot pairing",
-      "round advancement",
-      "champion announcement"
-    ],
-    "description": "Verifies the bracket supports odd-player balancing with a labelled house bot, records round winners, and shows the champion in the public winners section.",
+    "covers": ["auto start at target", "random pairing", "server-validated moves", "admin approval", "champion + settlement"],
     "steps": [
-      "Open a live tournament bracket",
-      "Review matches and any clearly labelled house-bot participant",
-      "Submit one winner per match through the tournament advancement workflow",
-      "Open Winners after the final match"
+      "Fill a 4-player tournament with 4 test accounts",
+      "Each player opens their match and plays it to the end",
+      "As admin, approve each proposed winner",
+      "Approve the final"
     ],
-    "expected": "Each round records one winner per match, advances the winners to the next round and displays the final champion and prize."
+    "expected": "Round 2 appears after round 1 approvals. Champion is announced under Winners, escrow is settled, bonus coins (if set) are credited."
   },
   {
-    "name": "Cancel an entry before start and refund demo reserve",
+    "name": "Underfilled tournament expires with refunds",
     "viewport": "mobile",
-    "covers": [
-      "pre-start cancellation",
-      "reserved balance refund",
-      "two-day underfilled failure state",
-      "no cancellation after start"
-    ],
-    "description": "Verifies reserved demo entry credits are refundable before tournament start and the app blocks cancellation once live.",
+    "covers": ["48h failure", "automatic refund"],
     "steps": [
-      "Join an open tournament",
-      "Cancel the entry before it starts",
-      "Confirm the available demo balance is restored",
-      "Attempt cancellation after the tournament becomes live"
+      "Join a tournament that will not fill",
+      "In staging, set its registration_deadline into the past",
+      "Reload the app (or wait for the pg_cron job)"
     ],
-    "expected": "The pre-start cancellation returns the reserved demo fee and cancellation is rejected after the tournament opens."
+    "expected": "Tournament shows REFUNDED/failed and the escrowed coins return to available balance."
+  },
+  {
+    "name": "All seven games are playable",
+    "viewport": "mobile",
+    "covers": ["tic-tac-toe", "connect-4", "gomoku", "memory-match", "scramble", "puzzle", "chess"],
+    "steps": ["Open Games in the arena", "Practise each game", "Confirm layout fits a 360px-wide screen"],
+    "expected": "Every game accepts legal moves, rejects illegal ones and reports a winner or draw."
   }
 ]

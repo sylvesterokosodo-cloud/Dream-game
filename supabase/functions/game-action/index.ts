@@ -11,6 +11,10 @@ import {
 
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 
+// Race games (both players act at once) are rate-limited per player so a script cannot
+// brute-force Scramble answers or spam moves. Turn-based games are limited by turn order.
+const RACE_MIN_INTERVAL_MS: Record<string, number> = { scramble: 1500, puzzle: 150 };
+
 Deno.serve(async (req) => {
   const pre = preflight(req);
   if (pre) return pre;
@@ -64,14 +68,25 @@ Deno.serve(async (req) => {
     }
     if (action !== "move") return json(req, { error: "Unknown action" }, 400);
 
+    const engine = engineFor(m.game);
+    const gap = RACE_MIN_INTERVAL_MS[m.game];
+    const now = Date.now();
+    if (gap !== undefined && now - (full.last?.[myIndex] ?? 0) < gap) {
+      return json(req, { error: "Too fast - slow down a little." }, 429);
+    }
+
     let next: FullGame;
     try {
       next = applyMove(m.game, full, body.move, myIndex);
+      if (gap !== undefined) {
+        const last: [number, number] = [full.last?.[0] ?? 0, full.last?.[1] ?? 0];
+        last[myIndex] = now;
+        next = { ...next, last };
+      }
     } catch (e) {
       return json(req, { error: (e as Error).message }, 422);
     }
 
-    const engine = engineFor(m.game);
     const outcome = engine.outcome(next.state);
     let proposed: string | null = null;
     let needsAdmin = false;

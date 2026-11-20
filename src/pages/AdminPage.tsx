@@ -5,7 +5,7 @@ import {
   type Tournament,
 } from '../lib/tournaments';
 import {
-  adminApproveResult, adminCancelTournament, fetchBracket, type Match,
+  adminApproveResult, adminCancelTournament, fetchAdminPayments, fetchBracket, type AdminPayment, type Match,
 } from '../lib/api';
 import { coinsLabel, copyText, STATUS_LABEL } from '../lib/format';
 
@@ -87,6 +87,8 @@ export default function AdminPage({ tournaments, notify, onChanged }: Props) {
         ))}
         {tournaments.length === 0 && <div className="admin-row"><span>No tournaments yet.</span></div>}
       </div>
+
+      <PaymentsPanel notify={notify} />
 
       {show && (
         <div className="modal-backdrop">
@@ -174,6 +176,44 @@ function AdminMatches({ tournament, notify, onChanged }: { tournament: Tournamen
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function PaymentsPanel({ notify }: { notify: (m: string) => void }) {
+  const [rows, setRows] = useState<AdminPayment[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    fetchAdminPayments().then((r) => { setRows(r.payments); setNames(r.names); }).catch((e: Error) => notify(e.message));
+  }, [open, notify]);
+  const stuck = (p: AdminPayment) => p.status === 'pending' && Date.now() - p.createdAt > 3_600_000;
+  return (
+    <div className="admin-panel">
+      <button className="btn-outline compact" onClick={() => setOpen(!open)}>
+        {open ? 'Hide' : 'Show'} payments &amp; reconciliation
+      </button>
+      {open && (
+        <div className="admin-list" style={{ marginTop: 12 }}>
+          {rows.length === 0 && <div className="admin-row"><span>No payments yet.</span></div>}
+          {rows.map((p) => (
+            <div className="admin-row" key={p.id}>
+              <div>
+                <b>₦{p.amountNgn.toLocaleString('en-NG')} · {names[p.userId] ?? 'Player'}</b>
+                <span>{p.txRef} · {new Date(p.createdAt).toLocaleString()}{p.flwTransactionId ? ` · FLW #${p.flwTransactionId}` : ''}</span>
+              </div>
+              <span className={'status-text ' + (p.status === 'successful' ? 'completed' : p.status === 'failed' ? 'failed' : 'open')}>
+                {p.status.toUpperCase()}{stuck(p) ? ' · STUCK >1h' : ''}
+              </span>
+            </div>
+          ))}
+          <div className="admin-row"><span>
+            Stuck or failed payments that were actually charged must be checked in the Flutterwave dashboard.
+            Re-delivering the webhook from there credits the coins safely (credits are idempotent).
+          </span></div>
+        </div>
+      )}
     </div>
   );
 }

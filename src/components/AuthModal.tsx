@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Crown, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseHost } from '../lib/supabase';
 
 type Props = { onClose: () => void; onDone: () => void };
 
@@ -9,6 +9,7 @@ export default function AuthModal({ onClose, onDone }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [adult, setAdult] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -19,10 +20,11 @@ export default function AuthModal({ onClose, onDone }: Props) {
     try {
       const cleanEmail = email.trim().toLowerCase();
       if (mode === 'register') {
+        if (!adult) throw new Error('You must confirm that you are 18 or older and accept the Terms.');
         const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
-          options: { data: { display_name: name.trim() } },
+          options: { data: { display_name: name.trim(), age_confirmed: true, accepted_terms_at: new Date().toISOString() } },
         });
         if (error) throw error;
         if (!data.session) {
@@ -37,7 +39,12 @@ export default function AuthModal({ onClose, onDone }: Props) {
       setPassword('');
       onDone();
     } catch (err) {
-      setMsg((err as Error).message || 'Could not complete account access.');
+      const raw = (err as Error).message || '';
+      setMsg(
+        /failed to fetch|networkerror|load failed|network request failed/i.test(raw)
+          ? `We cannot reach the Dream Game server (${supabaseHost}). Check your internet connection and try again. If this keeps happening the site owner must check the Supabase URL in the deployment.`
+          : raw || 'Could not complete account access.'
+      );
     } finally {
       setBusy(false);
     }
@@ -75,6 +82,13 @@ export default function AuthModal({ onClose, onDone }: Props) {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8}
             autoComplete={mode === 'register' ? 'new-password' : 'current-password'} placeholder="At least 8 characters" />
         </label>
+        {mode === 'register' && (
+          <label className="game-pool-option">
+            <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} required />
+            <span>I am 18 or older and accept the <a href="#/terms" onClick={onClose}>Terms</a> and{' '}
+              <a href="#/privacy" onClick={onClose}>Privacy Policy</a>.</span>
+          </label>
+        )}
         {msg && <div className="form-note">{msg}</div>}
         <button className="btn-primary submit" disabled={busy}>
           {busy ? 'Please wait…' : mode === 'register' ? 'Create my account' : 'Log in'}

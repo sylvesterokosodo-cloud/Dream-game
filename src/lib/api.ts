@@ -139,3 +139,23 @@ export const adminApproveResult = (matchId: string, winnerId: string) =>
   rpc<{ ok: boolean }>('dg_admin_approve_result', { p_match_id: matchId, p_winner: winnerId });
 export const adminCancelTournament = (id: string, reason: string) =>
   rpc<{ ok: boolean }>('dg_admin_cancel_tournament', { p_tournament_id: id, p_reason: reason });
+
+export type AdminPayment = {
+  id: string; txRef: string; userId: string; amountNgn: number; status: string;
+  flwTransactionId: string | null; createdAt: number;
+};
+/** Admin-only by RLS (dg_payments_read_admin); non-admins get only their own rows. */
+export async function fetchAdminPayments(limit = 50): Promise<{ payments: AdminPayment[]; names: Record<string, string> }> {
+  const { data, error } = await supabase
+    .from('dg_payments')
+    .select('id,tx_ref,user_id,amount_ngn,status,flw_transaction_id,created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  const payments = (data ?? []).map((r) => ({
+    id: String(r.id), txRef: String(r.tx_ref), userId: String(r.user_id), amountNgn: Number(r.amount_ngn),
+    status: String(r.status), flwTransactionId: r.flw_transaction_id ? String(r.flw_transaction_id) : null,
+    createdAt: new Date(String(r.created_at)).getTime(),
+  }));
+  return { payments, names: await fetchNames(payments.map((p) => p.userId)) };
+}

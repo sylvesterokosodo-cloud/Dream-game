@@ -1,13 +1,25 @@
-
 {
   "name": "dream-game",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run test:config && npm run test:games && npm run test:functions && npm run audit",
+    "test:games": "node --test supabase/functions/_shared/games/tests/engines.test.ts",
+    "test:db": "supabase test db",
+    "test:functions": "node --import ./supabase/functions/tests/loader.mjs --test supabase/functions/tests/functions.test.ts",
+    "audit": "python3 tests/crossref_audit.py",
+    "test:ui": "sh tests/e2e/build.sh && python3 tests/e2e/ui_tests.py",
+    "prebuild": "node scripts/check-env.mjs",
+    "check:env": "node scripts/check-env.mjs",
+    "test:config": "node --test tests/config.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
